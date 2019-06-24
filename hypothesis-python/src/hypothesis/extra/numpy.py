@@ -846,3 +846,65 @@ def broadcastable_shapes(shape, min_dims=0, max_dims=None, min_side=1, max_side=
         min_side=min_side,
         max_side=max_side,
     )
+
+
+@st.defines_strategy
+def integer_array_indices(shape, result_shape=array_shapes(), dtype="int"):
+    # type: (Tuple[int, ...], SearchStrategy[Tuple[int, ...]], Union[np.dtype, str]) -> st.SearchStrategy[Tuple[np.ndarray, ...]]
+    """Return a search strategy for generating tuples of integer-arrays that index into an
+    array of the specified shape, via advanced indexing.
+
+    Examples from this strategy shrink towards the tuple of index-arrays::
+
+        len(shape) * (np.zeros(drawn_result_shape, dtype), )
+
+    * ``shape`` a tuple of integers that indicates the shape of the array, whose indices are
+       being generated.
+    * ``result_shape`` a strategy for generating tuples of integers, which describe the shape
+       of the resulting index arrays. The default is :func:`~hypothesis.extra.numpy.array_shapes`.
+       The shape drawn from this strategy reflects the shape of the array that will be produced
+       via advanced indexing.
+    * ``dtype`` the integer data type of the generated index-arrays.
+       Negative integer indices can be generated if a signed integer type is
+       specified.
+
+    Recall that an array can be indexed using a tuple of integer-arrays to access its members
+    in an arbitrary order, and producing an array with an arbitrary shape. E.g.
+
+     .. code-block:: pycon
+
+        >>> from numpy import array
+        >>> x = array([-0, -1, -2, -3, -4])
+        >>> ind = (array([[4, 0], [0, 1]]),)  # a tuple containing a 2D integer-array
+        >>> x[ind]  # the resulting array is commensurate with the indexing array(s)
+        array([[-4,  0],
+               [0, -1]])
+
+    Note that this strategy does not accommodate all variations of so-called 'advanced indexing', as
+    prescribed by NumPy's nomenclature. A strategy advanced-boolean indexing is left to
+    the user to define, simply as:``arrays(shape=..., dtype=bool)``. And a strategy for generating
+    combined basic & advanced indices is deliberately omitted due to the inherent complexity
+    of hybrid indexing schemes."""
+    check_type(tuple, shape, "shape")
+    if not shape or any(not isinstance(x, integer_types) or x < 1 for x in shape):
+        raise InvalidArgument(
+            "shape must be a non-empty tuple of integers greater than 0, got %r"
+            % (shape,)
+        )
+
+    check_type(SearchStrategy, result_shape, "result_shape")
+
+    if not np.issubdtype(dtype, np.integer):
+        raise InvalidArgument("dtype must be an integer data type. Got %r" % dtype)
+
+    def bnds(size):
+        lower = -size if np.issubdtype(dtype, np.signedinteger) else 0
+        return lower, size - 1
+
+    def index_arrays_strat(index_shape):
+        return (
+            arrays(dtype=dtype, shape=index_shape, elements=st.integers(*bnds(size)))
+            for size in shape
+        )
+
+    return result_shape.flatmap(lambda x: st.tuples(*index_arrays_strat(index_shape=x)))
