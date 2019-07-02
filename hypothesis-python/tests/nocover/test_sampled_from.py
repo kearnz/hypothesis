@@ -20,7 +20,7 @@ from __future__ import absolute_import, division, print_function
 import pytest
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis.errors import FailedHealthCheck
 from hypothesis.internal.compat import hrange
 from tests.common.utils import counts_calls, fails_with
@@ -70,6 +70,7 @@ def test_unsat_sets_of_samples(x):
     assert False
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much])
 @given(st.sets(st.sampled_from(range(50)), min_size=50))
 def test_efficient_sets_of_samples(x):
     assert x == set(range(50))
