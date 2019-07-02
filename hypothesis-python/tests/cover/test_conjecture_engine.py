@@ -43,7 +43,11 @@ from hypothesis.internal.conjecture.engine import (
 )
 from hypothesis.internal.conjecture.shrinker import Shrinker, block_program
 from hypothesis.internal.conjecture.shrinking import Float
-from hypothesis.internal.conjecture.utils import Sampler, calc_label_from_name
+from hypothesis.internal.conjecture.utils import (
+    Sampler,
+    calc_label_from_name,
+    integer_range,
+)
 from hypothesis.internal.entropy import deterministic_PRNG
 from tests.common.strategies import SLOW, HardToShrink
 from tests.common.utils import counts_calls, no_shrink
@@ -1660,3 +1664,12 @@ def test_shrinker_skips_stale_examples(monkeypatch, pass_name):
 
     # Confirm that the pass had to deal with stale examples.
     assert Shrinker.example_for_stable_identifier.calls > 0
+
+
+def test_integer_range_performance_bug():
+    with deterministic_PRNG():
+        runner = ConjectureRunner(
+            lambda data: integer_range(data, 0, 2), settings=TEST_SETTINGS
+        )
+
+        runner.run()
