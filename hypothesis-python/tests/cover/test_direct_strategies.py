@@ -200,6 +200,7 @@ def test_validates_keyword_arguments(fn, kwargs):
     (ds.lists, {"elements": ds.integers(), "max_size": 5}),
     (ds.lists, {"elements": ds.booleans(), "min_size": 5}),
     (ds.lists, {"elements": ds.booleans(), "min_size": 5, "max_size": 10}),
+    (ds.lists, {"elements": ds.sampled_from([0, 1]), "min_size": 3}),
     (ds.sets, {"min_size": 10, "max_size": 10, "elements": ds.integers()}),
     (ds.booleans, {}),
     (ds.just, {"value": "hi"}),
